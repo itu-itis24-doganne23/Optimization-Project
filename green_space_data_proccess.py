@@ -62,6 +62,6 @@ gdf_projected['alan_metrekare'] = gdf_projected.geometry.area
 print(f"\nMahalleler ve Yüzölçümleri ({neighborhood_column} sütununa göre):")
 results = gdf_projected[[neighborhood_column, 'alan_metrekare']]
 
-output_csv_file = 'result/mahalle_yuzolcumu.csv'
+output_csv_file = 'result/ilce_yesil_alan_yuzolcumu.csv'
 results.to_csv(output_csv_file, index=False, encoding='utf-8-sig')
 print(f"\nSonuçlar '{output_csv_file}' dosyasına kaydedildi.")
