@@ -47,11 +47,17 @@ taksi_df = pd.read_csv("result/ilce_toplam_taksi.csv")
 taksi_df.columns = ["ILCE_RAW", "Taksi_Durak_Sayisi"]
 taksi_df["ILCE"] = taksi_df["ILCE_RAW"].apply(normalize_ilce)
 
+#hava kalitesi
+aqi_df = pd.read_csv("result/hava_kalitesi_ortalamalari.csv")  # dosya adı aqi_verisi.csv olsun
+aqi_df.columns = ["ILCE_RAW", "Ortalama_AQI"]
+aqi_df["ILCE"] = aqi_df["ILCE_RAW"].apply(normalize_ilce)
+
 # Merge işlemleri
 merged = alan_df.merge(minibus_df[["ILCE", "Minibus_Durak_Sayisi"]], on="ILCE", how="left")
 merged = merged.merge(rayli_df[["ILCE", "Rayli_Istasyon_Sayisi"]], on="ILCE", how="left")
 merged = merged.merge(taksi_df[["ILCE", "Taksi_Durak_Sayisi"]], on="ILCE", how="left")
 merged = merged.merge(nufus_df[["ILCE", "Nufus"]], on="ILCE", how="left")
+merged = merged.merge(aqi_df[["ILCE", "Ortalama_AQI"]], on="ILCE", how="left")
 # NaN'leri 0 yap
 merged.fillna(0, inplace=True)
 
@@ -62,7 +68,8 @@ merged[["Minibus_Durak_Sayisi", "Rayli_Istasyon_Sayisi", "Taksi_Durak_Sayisi"]] 
 # Orijinal ilçe adlarını geri getir
 merged.drop(columns=["ILCE"], inplace=True)
 merged.rename(columns={"ILCE_RAW": "ILCE"}, inplace=True)
-merged = merged[["ILCE", "alan_metrekare", "Nufus", "Minibus_Durak_Sayisi", "Rayli_Istasyon_Sayisi", "Taksi_Durak_Sayisi"]]
+merged = merged[["ILCE", "alan_metrekare", "Nufus", "Minibus_Durak_Sayisi",
+                 "Rayli_Istasyon_Sayisi", "Taksi_Durak_Sayisi", "Ortalama_AQI"]]
 # Kaydet
 merged.to_csv("result/birlesik_ilce_verisi.csv", index=False)
 
