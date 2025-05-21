@@ -11,7 +11,7 @@ delta = 0.01       # Minimum green space per capita (e.g., 10 sqm/person)
 
 # --- Data Loading and Preparation ---
 try:
-    df_districts = pd.read_csv('birlesik_ilce_verisi.csv')
+    df_districts = pd.read_csv('result/birlesik_ilce_verisi.csv')
     # !!! IMPORTANT: Adjust these column names to match your CSV file EXACTLY !!!
     P_values = df_districts['Nufus'].values
     C_values = df_districts['AraziMaliyeti'].values
