@@ -1,7 +1,7 @@
 import geopandas as gpd
 
 # Dosya adını belirtin
-file_path = 'green_space.json' # Yüklediğiniz dosyanın adı
+file_path = 'data/green_space.json' # Yüklediğiniz dosyanın adı
 
 # 1. GeoJSON dosyasını GeoDataFrame olarak yükle
 try:
@@ -18,7 +18,7 @@ print(gdf.head())
 print("\nSütun adları:")
 print(gdf.columns)
 
-neighborhood_column = 'MAHALLE'
+neighborhood_column = 'ILCE'
 
 # Kontrol: Belirtilen mahalle sütunu DataFrame'de var mı?
 if neighborhood_column == 'NEIGHBORHOOD_COLUMN_NAME_PLACEHOLDER':
@@ -62,6 +62,6 @@ gdf_projected['alan_metrekare'] = gdf_projected.geometry.area
 print(f"\nMahalleler ve Yüzölçümleri ({neighborhood_column} sütununa göre):")
 results = gdf_projected[[neighborhood_column, 'alan_metrekare']]
 
-output_csv_file = 'result/mahalle_yesil_alan_yuzolcumu.csv'
+output_csv_file = 'result/ilce_yesil_alan_yuzolcumu.csv'
 results.to_csv(output_csv_file, index=False, encoding='utf-8-sig')
 print(f"\nSonuçlar '{output_csv_file}' dosyasına kaydedildi.")
