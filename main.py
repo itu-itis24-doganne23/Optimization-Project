@@ -14,12 +14,13 @@ try:
     df_districts = pd.read_csv('result/birlesik_ilce_verisi.csv')
     # !!! IMPORTANT: Adjust these column names to match your CSV file EXACTLY !!!
     P_values = df_districts['Nufus'].values
-    C_values = df_districts['AraziMaliyeti'].values
-    AQ_values = df_districts['HavaKalitesiPuani'].values
-    T_values = df_districts['UlasimPuani'].values
-    GA_values = df_districts['MevcutYesilAlan'].values
-    A_max_values = df_districts['MaxYeniYesilAlan'].values # Max *new* green space
-    district_names = df_districts['IlceAdi'].values if 'IlceAdi' in df_districts.columns else [f"District {i+1}" for i in range(len(P_values))]
+    C_values = np.zeros_like(P_values, dtype=float)
+    AQ_values = df_districts['Ortalama_AQI'].values
+    tot = 0.3*df_districts['Minibus_Durak_Sayisi'].values + 0.6*df_districts['Rayli_Istasyon_Sayisi'].values + 0.1*df_districts['Taksi_Durak_Sayisi'].values
+    T_values = tot/np.max(tot)
+    GA_values = df_districts['alan_metrekare'].values
+    A_max_values = df_districts['Nufus'].values*10 # Max *new* green space
+    district_names = df_districts['ILCE'].values if 'ILCE' in df_districts.columns else [f"District {i+1}" for i in range(len(P_values))]
 
 except FileNotFoundError:
     print("Warning: 'birlesik_ilce_verisi.csv' not found. Using placeholder data.")
@@ -64,15 +65,22 @@ if np.any(lower_bounds > upper_bounds):
 def objective_function(x_vector):
     if len(x_vector) != N:
         raise ValueError(f"Input vector x_vector must have length {N}")
-    if np.any(x_vector + epsilon <= 0): # Should be prevented by L_i >= 0
+    # 1) Negatif veya sıfıra çok yakın x_i olmasın
+    if np.any(x_vector + epsilon <= 0):
+        return float('inf')
+    # 2) Kişi başı minimum yeşil alan kısıtı (GA_i + x_i >= delta * P_i)
+    if np.any(GA_values + x_vector < delta * P_values):
+        return float('inf')
+    # 3) Alt/üst bound’ları aşmasın (genelde zaten popülasyonda clip’leniyor)
+    if np.any(x_vector < lower_bounds) or np.any(x_vector > upper_bounds):
         return float('inf')
 
     term1 = alpha_prime * (P_values * C_values) / (x_vector + epsilon)
     term2 = gamma_prime * (AQ_values * x_vector) / P_values
-    term3 = beta_prime * (T_values * x_vector) / P_values
-    
-    total_sum = np.sum(term1 - term2 - term3)
-    return total_sum
+    term3 = beta_prime  * (T_values * x_vector) / P_values
+
+    return -np.sum(term1 - term2 - term3)
+
 
 # --- GENETIC ALGORITHM (Adapted from optimization_algorithms.py) ---
 
