@@ -65,15 +65,22 @@ if np.any(lower_bounds > upper_bounds):
 def objective_function(x_vector):
     if len(x_vector) != N:
         raise ValueError(f"Input vector x_vector must have length {N}")
-    if np.any(x_vector + epsilon <= 0): # Should be prevented by L_i >= 0
+    # 1) Negatif veya sıfıra çok yakın x_i olmasın
+    if np.any(x_vector + epsilon <= 0):
+        return float('inf')
+    # 2) Kişi başı minimum yeşil alan kısıtı (GA_i + x_i >= delta * P_i)
+    if np.any(GA_values + x_vector < delta * P_values):
+        return float('inf')
+    # 3) Alt/üst bound’ları aşmasın (genelde zaten popülasyonda clip’leniyor)
+    if np.any(x_vector < lower_bounds) or np.any(x_vector > upper_bounds):
         return float('inf')
 
     term1 = alpha_prime * (P_values * C_values) / (x_vector + epsilon)
     term2 = gamma_prime * (AQ_values * x_vector) / P_values
-    term3 = beta_prime * (T_values * x_vector) / P_values
-    
-    total_sum = np.sum(term1 - term2 - term3)
-    return total_sum
+    term3 = beta_prime  * (T_values * x_vector) / P_values
+
+    return -np.sum(term1 - term2 - term3)
+
 
 # --- GENETIC ALGORITHM (Adapted from optimization_algorithms.py) ---
 
