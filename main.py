@@ -11,15 +11,16 @@ delta = 0.01       # Minimum green space per capita (e.g., 10 sqm/person)
 
 # --- Data Loading and Preparation ---
 try:
-    df_districts = pd.read_csv('birlesik_ilce_verisi.csv')
+    df_districts = pd.read_csv('result/birlesik_ilce_verisi.csv')
     # !!! IMPORTANT: Adjust these column names to match your CSV file EXACTLY !!!
     P_values = df_districts['Nufus'].values
-    C_values = df_districts['AraziMaliyeti'].values
-    AQ_values = df_districts['HavaKalitesiPuani'].values
-    T_values = df_districts['UlasimPuani'].values
-    GA_values = df_districts['MevcutYesilAlan'].values
-    A_max_values = df_districts['MaxYeniYesilAlan'].values # Max *new* green space
-    district_names = df_districts['IlceAdi'].values if 'IlceAdi' in df_districts.columns else [f"District {i+1}" for i in range(len(P_values))]
+    C_values = np.zeros_like(P_values, dtype=float)
+    AQ_values = df_districts['Ortalama_AQI'].values
+    tot = 0.3*df_districts['Minibus_Durak_Sayisi'].values + 0.6*df_districts['Rayli_Istasyon_Sayisi'].values + 0.1*df_districts['Taksi_Durak_Sayisi'].values
+    T_values = tot/np.max(tot)
+    GA_values = df_districts['alan_metrekare'].values
+    A_max_values = df_districts['Nufus'].values*10 # Max *new* green space
+    district_names = df_districts['ILCE'].values if 'ILCE' in df_districts.columns else [f"District {i+1}" for i in range(len(P_values))]
 
 except FileNotFoundError:
     print("Warning: 'birlesik_ilce_verisi.csv' not found. Using placeholder data.")
