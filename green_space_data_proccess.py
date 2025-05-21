@@ -1,7 +1,7 @@
 import geopandas as gpd
 
 # Dosya adını belirtin
-file_path = 'green_space.json' # Yüklediğiniz dosyanın adı
+file_path = 'data/green_space.json' # Yüklediğiniz dosyanın adı
 
 # 1. GeoJSON dosyasını GeoDataFrame olarak yükle
 try:
@@ -18,7 +18,7 @@ print(gdf.head())
 print("\nSütun adları:")
 print(gdf.columns)
 
-neighborhood_column = 'MAHALLE'
+neighborhood_column = 'ILCE'
 
 # Kontrol: Belirtilen mahalle sütunu DataFrame'de var mı?
 if neighborhood_column == 'NEIGHBORHOOD_COLUMN_NAME_PLACEHOLDER':
