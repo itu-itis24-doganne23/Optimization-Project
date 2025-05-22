@@ -82,8 +82,15 @@ def run_ga(bounds, objective):
 def main():
     df = pd.read_csv("result/birlesik_ilce_verisi.csv")
 
+    # Normalize + tersleme
+    aqi = df["Ortalama_AQI"]
+    normalized_inverse_aqi = 1 - (aqi - aqi.min()) / (aqi.max() - aqi.min())
+
+    # Taşıma skorunu hesapla
     df["Ti"] = df["Minibus_Durak_Sayisi"] + df["Taksi_Durak_Sayisi"] + 2 * df["Rayli_Istasyon_Sayisi"]
-    df["Si"] = W1 * df["Ortalama_AQI"] + W2 * df["Ti"]
+
+    # Nihai S skoru
+    df["Si"] = W1 * normalized_inverse_aqi + W2 * df["Ti"]
 
     GA = df["alan_metrekare"].values
     P = df["Nufus"].values
