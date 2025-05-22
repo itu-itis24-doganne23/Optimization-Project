@@ -35,16 +35,55 @@ def run_ga(bounds, objective):
     population = init_population(bounds)
     for _ in range(GENS):
         fitnesses = [objective(ind) for ind in population]
-        new_pop = select(population, fitnesses)
-        while len(new_pop) < POP_SIZE:
-            parents = random.sample(new_pop, 2)
-            child = crossover(parents[0], parents[1])
+
+        # Bireyleri uygunluk değerlerine göre sırala (düşük olan daha iyi)
+        sorted_indices = np.argsort(fitnesses)
+        
+        next_generation_population = []
+
+        # Elitizm: En iyi bireyleri doğrudan sonraki nesle aktar
+        num_elites = int(ELITISM * POP_SIZE)
+        for i in range(num_elites):
+            next_generation_population.append(population[sorted_indices[i]])
+
+        # Kalan popülasyonu çaprazlama ve mutasyon ile doldur
+        num_offspring = POP_SIZE - num_elites
+        
+        
+        candidate_parent_indices = sorted_indices # Tüm popülasyonu aday olarak al
+        if len(candidate_parent_indices) < 2: # Çok küçük popülasyonlar için güvenlik önlemi
+            candidate_parent_indices = list(range(POP_SIZE))
+
+
+        for _ in range(num_offspring): # Tek çocuk üreten çaprazlama için
+            if len(candidate_parent_indices) >= POP_SIZE // 2 and POP_SIZE // 2 >=2 :
+                 parent_pool_indices = candidate_parent_indices[:POP_SIZE//2]
+            else: # Eğer popülasyon çok küçükse veya elitizm oranı yüksekse, tüm adayları kullan
+                 parent_pool_indices = candidate_parent_indices
+
+            if len(parent_pool_indices) < 2: # Eğer ebeveyn havuzu hala çok küçükse
+                idx1, idx2 = random.sample(range(len(population)), 2)
+                parent1 = population[idx1]
+                parent2 = population[idx2]
+            else:
+                p1_local_idx, p2_local_idx = random.sample(range(len(parent_pool_indices)), 2)
+                parent1 = population[parent_pool_indices[p1_local_idx]]
+                parent2 = population[parent_pool_indices[p2_local_idx]]
+
+            child = crossover(parent1, parent2)
             if random.random() < MUT_PROB:
                 child = mutate(child, bounds)
-            new_pop.append(child)
-        population = new_pop
-    best = min(population, key=objective)
-    return best, objective(best)
+            next_generation_population.append(child)
+            
+        population = next_generation_population
+
+    # Son popülasyondaki en iyi bireyi bul
+    final_fitnesses = [objective(ind) for ind in population]
+    best_idx = np.argmin(final_fitnesses)
+    best_individual = population[best_idx]
+    best_fitness = final_fitnesses[best_idx]
+    
+    return best_individual, best_fitness
 
 ### PSO Sınıfı ###
 class Particle:
