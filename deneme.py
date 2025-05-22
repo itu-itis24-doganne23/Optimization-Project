@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
 # Parametreler
 W1 = 0.5
 W2 = 0.5
@@ -40,21 +39,6 @@ def repair_individual(x, bounds):
         x = x * (TOTAL_LIMIT / total)
     return x
 
-def run_ga(bounds, objective):
-    population = init_population(bounds)
-    for gen in range(GENS):
-        fitnesses = [objective(ind) for ind in population]
-        new_pop = select(population, fitnesses)
-        while len(new_pop) < POP_SIZE:
-            parents = random.sample(new_pop, 2)
-            child = crossover(parents[0], parents[1])
-            if random.random() < MUT_PROB:
-                child = mutate(child, bounds)
-            child = repair_individual(child, bounds)
-            new_pop.append(child)
-        population = new_pop
-    best = min(population, key=objective)
-    return best, objective(best)
 
 def run_ga(bounds, objective):
     population = init_population(bounds)
@@ -78,19 +62,11 @@ def run_ga(bounds, objective):
     best = min(population, key=objective)
     return best, objective(best), history
 
-
 def main():
     df = pd.read_csv("result/birlesik_ilce_verisi.csv")
 
-    # Normalize + tersleme
-    aqi = df["Ortalama_AQI"]
-    normalized_inverse_aqi = 1 - (aqi - aqi.min()) / (aqi.max() - aqi.min())
-
-    # Taşıma skorunu hesapla
     df["Ti"] = df["Minibus_Durak_Sayisi"] + df["Taksi_Durak_Sayisi"] + 2 * df["Rayli_Istasyon_Sayisi"]
-
-    # Nihai S skoru
-    df["Si"] = W1 * normalized_inverse_aqi + W2 * df["Ti"]
+    df["Si"] = W1 * df["Ortalama_AQI"] + W2 * df["Ti"]
 
     GA = df["alan_metrekare"].values
     P = df["Nufus"].values
@@ -115,8 +91,6 @@ def main():
     df.to_csv("optimum_yesil_alan_sonuclari.csv", index=False)
     print("\n📁 Sonuçlar 'optimum_yesil_alan_sonuclari.csv' dosyasına kaydedildi.")
 
-
-    # Grafik çiz
     plt.figure(figsize=(10, 6))
     plt.plot(history, marker='o', color='green')
     plt.title("Genetik Algoritma Yakınsama Grafiği")
@@ -127,7 +101,6 @@ def main():
     plt.savefig("ga_yakinssama_grafigi.png")
     plt.show()
     print("\n📊 Yakınsama grafiği 'ga_yakinssama_grafigi.png' olarak kaydedildi.")
-
 
 if __name__ == "__main__":
     main()
