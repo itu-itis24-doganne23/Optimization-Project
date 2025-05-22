@@ -1,207 +1,184 @@
 import pandas as pd
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 # Parametreler
 W1 = 0.5
 W2 = 0.5
-rho = 30  # kişi başı maksimum yeşil alan
-TOTAL_LIMIT = 1_000_000  # toplam yapılabilecek yeşil alan sınırı
+TOTAL_LIMIT = 3_000_000
+PER_TOWN_LIMIT = 1_000_000
 
 POP_SIZE = 100
 GENS = 200
 MUT_PROB = 0.2
 ELITISM = 0.1
 
-### GA Fonksiyonları ###
+# GA Yardımcı Fonksiyonlar
 def init_population(bounds):
-    return [np.array([random.uniform(lb, ub) for lb, ub in bounds]) for _ in range(POP_SIZE)]
+    return [repair_individual(np.array([random.uniform(lb, ub) for lb, ub in bounds]), bounds) for _ in range(POP_SIZE)]
 
 def mutate(individual, bounds):
-    return np.array([
+    mutant = np.array([
         min(ub, max(lb, gene + np.random.normal(0, 1000)))
         for gene, (lb, ub) in zip(individual, bounds)
     ])
+    return repair_individual(mutant, bounds)
 
 def crossover(p1, p2):
     alpha = np.random.rand(len(p1))
-    return alpha * p1 + (1 - alpha) * p2
+    child = alpha * p1 + (1 - alpha) * p2
+    return child
 
 def select(population, fitnesses):
     idx = np.argsort(fitnesses)
     return [population[i] for i in idx[:int(ELITISM * POP_SIZE)]]
 
+def repair_individual(x, bounds):
+    x = np.clip(x, [b[0] for b in bounds], [b[1] for b in bounds])
+    total = np.sum(x)
+    if total > TOTAL_LIMIT:
+        x = x * (TOTAL_LIMIT / total)
+    return x
+
 def run_ga(bounds, objective):
     population = init_population(bounds)
-    for _ in range(GENS):
+    history = []
+
+    for gen in range(GENS):
         fitnesses = [objective(ind) for ind in population]
+        best_fitness = min(fitnesses)
+        history.append(best_fitness)
 
-        # Bireyleri uygunluk değerlerine göre sırala (düşük olan daha iyi)
-        sorted_indices = np.argsort(fitnesses)
-        
-        next_generation_population = []
-
-        # Elitizm: En iyi bireyleri doğrudan sonraki nesle aktar
-        num_elites = int(ELITISM * POP_SIZE)
-        for i in range(num_elites):
-            next_generation_population.append(population[sorted_indices[i]])
-
-        # Kalan popülasyonu çaprazlama ve mutasyon ile doldur
-        num_offspring = POP_SIZE - num_elites
-        
-        
-        candidate_parent_indices = sorted_indices # Tüm popülasyonu aday olarak al
-        if len(candidate_parent_indices) < 2: # Çok küçük popülasyonlar için güvenlik önlemi
-            candidate_parent_indices = list(range(POP_SIZE))
-
-
-        for _ in range(num_offspring): # Tek çocuk üreten çaprazlama için
-            if len(candidate_parent_indices) >= POP_SIZE // 2 and POP_SIZE // 2 >=2 :
-                 parent_pool_indices = candidate_parent_indices[:POP_SIZE//2]
-            else: # Eğer popülasyon çok küçükse veya elitizm oranı yüksekse, tüm adayları kullan
-                 parent_pool_indices = candidate_parent_indices
-
-            if len(parent_pool_indices) < 2: # Eğer ebeveyn havuzu hala çok küçükse
-                idx1, idx2 = random.sample(range(len(population)), 2)
-                parent1 = population[idx1]
-                parent2 = population[idx2]
-            else:
-                p1_local_idx, p2_local_idx = random.sample(range(len(parent_pool_indices)), 2)
-                parent1 = population[parent_pool_indices[p1_local_idx]]
-                parent2 = population[parent_pool_indices[p2_local_idx]]
-
-            child = crossover(parent1, parent2)
+        new_pop = select(population, fitnesses)
+        while len(new_pop) < POP_SIZE:
+            parents = random.sample(new_pop, 2)
+            child = crossover(parents[0], parents[1])
             if random.random() < MUT_PROB:
                 child = mutate(child, bounds)
-            next_generation_population.append(child)
-            
-        population = next_generation_population
+            child = repair_individual(child, bounds)
+            new_pop.append(child)
+        population = new_pop
 
-    # Son popülasyondaki en iyi bireyi bul
-    final_fitnesses = [objective(ind) for ind in population]
-    best_idx = np.argmin(final_fitnesses)
-    best_individual = population[best_idx]
-    best_fitness = final_fitnesses[best_idx]
-    
-    return best_individual, best_fitness
+    best = min(population, key=objective)
+    return best, objective(best), history
 
-### PSO Sınıfı ###
+# PSO Sınıf ve Fonksiyonlar
 class Particle:
-    def __init__(self, num_dimensions, l_bounds, u_bounds):
-        self.x = np.random.uniform(l_bounds, u_bounds, num_dimensions)
-        v_range = (u_bounds - l_bounds) * 0.1
-        self.v = np.random.uniform(-v_range, v_range, num_dimensions)
-        self.x_best = self.x.copy()
-        self.y_best = float('inf')
+    def __init__(self, x, v):
+        self.x = x
+        self.v = v
+        self.x_best = x.copy()
+        self.y_best = None
 
-def particle_swarm_optimization(f_obj, num_particles, num_dimensions, k_max_iterations,
-                                w_inertia, c1_cognitive, c2_social,
-                                seed_val, l_bounds, u_bounds):
-    np.random.seed(seed_val)
-    swarm = [Particle(num_dimensions, l_bounds, u_bounds) for _ in range(num_particles)]
+def particle_swarm_optimization(f, population, seed, k_max, w=0.7, c1=1.5, c2=1.5):
+    np.random.seed(seed)
+    n = len(population[0].x)
+    x_best = None
+    y_best = float("inf")
+    history = []
 
-    g_best_x = None
-    g_best_y = float('inf')
-    v_max = (u_bounds - l_bounds) * 0.2
-    v_min = -v_max
-    history_best_fitness = []
+    for p in population:
+        y = f(p.x)
+        p.y_best = y
+        if y < y_best:
+            x_best = p.x.copy()
+            y_best = y
 
-    for p in swarm:
-        p.y_best = f_obj(p.x)
-        if p.y_best < g_best_y:
-            g_best_y = p.y_best
-            g_best_x = p.x.copy()
-
-    for k in range(k_max_iterations):
-        for p in swarm:
-            r1 = np.random.rand(num_dimensions)
-            r2 = np.random.rand(num_dimensions)
-            cognitive = c1_cognitive * r1 * (p.x_best - p.x)
-            social = c2_social * r2 * (g_best_x - p.x)
-            p.v = w_inertia * p.v + cognitive + social
-            np.clip(p.v, v_min, v_max, out=p.v)
+    for k in range(k_max):
+        for p in population:
+            r1, r2 = np.random.rand(n), np.random.rand(n)
+            p.v = w * p.v + c1 * r1 * (p.x_best - p.x) + c2 * r2 * (x_best - p.x)
             p.x += p.v
-            np.clip(p.x, l_bounds, u_bounds, out=p.x)
+            p.x = repair_individual(p.x, bounds)
+            y = f(p.x)
 
-            current_y = f_obj(p.x)
-            if current_y < p.y_best:
-                p.y_best = current_y
+            if y < p.y_best:
                 p.x_best = p.x.copy()
-            if current_y < g_best_y:
-                g_best_y = current_y
-                g_best_x = p.x.copy()
-        history_best_fitness.append(g_best_y)
+                p.y_best = y
+            if y < y_best:
+                x_best = p.x.copy()
+                y_best = y
 
-    return g_best_x, g_best_y, history_best_fitness
+        history.append(y_best)
 
-### Ana Fonksiyon ###
+    return x_best, y_best, history
+
+def create_population(m, lower_bound, upper_bound, seed):
+    np.random.seed(seed)
+    population = []
+    for _ in range(m):
+        x = np.random.uniform(lower_bound, upper_bound)
+        x = repair_individual(x, bounds)
+        v = np.random.uniform(-0.1, 0.1, len(x))  # daha küçük başlangıç hızı
+        particle = Particle(x, v)
+        population.append(particle)
+    return population
+
+def run_pso(bounds, objective):
+    population = create_population(POP_SIZE, [b[0] for b in bounds], [b[1] for b in bounds], seed=42)
+    best, best_score, history = particle_swarm_optimization(objective, population, seed=42, k_max=GENS)
+    return best, best_score, history
+
 def main():
     df = pd.read_csv("result/birlesik_ilce_verisi.csv")
 
     df["Ti"] = df["Minibus_Durak_Sayisi"] + df["Taksi_Durak_Sayisi"] + 2 * df["Rayli_Istasyon_Sayisi"]
-    df["Si"] = W1 * df["Ortalama_AQI"] + W2 * df["Ti"]
 
-    GA = df["alan_metrekare"].values
-    P = df["Nufus"].values
-    S = df["Si"].values
+    GA_real = df["alan_metrekare"].values
+    GA_min, GA_max = GA_real.min(), GA_real.max()
+    GA_norm = (GA_real - GA_min) / (GA_max - GA_min)
 
-    lower_bounds = np.zeros(len(GA))
-    upper_bounds = np.minimum(rho * P - GA, GA / 2)
-    upper_bounds = np.maximum(upper_bounds, 0)  # negatif olmasın
+    P_real = df["Nufus"].values
+    P = (P_real - P_real.min()) / (P_real.max() - P_real.min())
 
-    # Geçerli ilçeleri filtrele
-    valid_indices = np.where(upper_bounds > lower_bounds)[0]
-    filtered_l_bounds = lower_bounds[valid_indices]
-    filtered_u_bounds = upper_bounds[valid_indices]
-    filtered_GA = GA[valid_indices]
-    filtered_P = P[valid_indices]
-    filtered_S = S[valid_indices]
+    Ti = df["Ti"]
+    Ti = (Ti - Ti.min()) / (Ti.max() - Ti.min())
 
-    # Ortak objective
+    AQI = df["Ortalama_AQI"]
+    AQI = (AQI - AQI.min()) / (AQI.max() - AQI.min())
+
+    S = W1 * AQI + W2 * Ti
+
+    lower_bounds = np.zeros(len(GA_real))
+    upper_bounds = np.minimum(GA_real / 2, PER_TOWN_LIMIT)
+    global bounds
+    bounds = list(zip(lower_bounds, upper_bounds))
+
     def objective(x):
-        total_new_area = np.sum(x)
-        penalty = 1e6 if total_new_area > TOTAL_LIMIT else 0
-        return np.sum((filtered_S * filtered_P) / (filtered_GA + x + 1)) + penalty
+        base = np.sum((S * P) / (GA_norm + x / GA_max + 1e-6))
+        green_per_person = GA_real / (P_real + 1e-6)
+        normalized_gpp = green_per_person / np.max(green_per_person)
+        fairness_penalty = np.sum(x * normalized_gpp)
+        return base + 0.5 * fairness_penalty
 
-    # ---- GA ----
-    ga_bounds = list(zip(filtered_l_bounds, filtered_u_bounds))
-    best_ga, score_ga = run_ga(ga_bounds, objective)
+    best_ga, score_ga, history_ga = run_ga(bounds, objective)
+    best_pso, score_pso, history_pso = run_pso(bounds, objective)
 
-    # ---- PSO ----
-    best_pso, score_pso, _ = particle_swarm_optimization(
-        objective,
-        num_particles=100,
-        num_dimensions=len(filtered_GA),
-        k_max_iterations=200,
-        w_inertia=0.7,
-        c1_cognitive=1.5,
-        c2_social=1.5,
-        seed_val=42,
-        l_bounds=filtered_l_bounds,
-        u_bounds=filtered_u_bounds
-    )
+    df["Yeni_Yapilacak_Yesil_Alan_GA"] = best_ga
+    df["Toplam_Yesil_Alan_GA"] = df["alan_metrekare"] + best_ga
 
-    # Sonuçları tam dizilere yerleştir
-    full_ga = np.zeros(len(GA))
-    full_ga[valid_indices] = best_ga
+    df["Yeni_Yapilacak_Yesil_Alan_PSO"] = best_pso
+    df["Toplam_Yesil_Alan_PSO"] = df["alan_metrekare"] + best_pso
 
-    full_pso = np.zeros(len(GA))
-    full_pso[valid_indices] = best_pso
+    print(f"\n✅ GA en iyi skor: {score_ga:.2f}")
+    print(f"✅ PSO en iyi skor: {score_pso:.2f}")
 
-    df["GA_Yeni_Yesil_Alan"] = full_ga
-    df["GA_Toplam_Yesil_Alan"] = df["alan_metrekare"] + full_ga
-
-    df["PSO_Yeni_Yesil_Alan"] = full_pso
-    df["PSO_Toplam_Yesil_Alan"] = df["alan_metrekare"] + full_pso
-
-    # Sonuçları yazdır
-    print(f"\n✅ GA Skoru: {score_ga:.2f} | Yeni yeşil alan: {np.sum(best_ga):,.2f} m²")
-    print(f"✅ PSO Skoru: {score_pso:.2f} | Yeni yeşil alan: {np.sum(best_pso):,.2f} m²")
-    print(df[["ILCE", "GA_Yeni_Yesil_Alan", "PSO_Yeni_Yesil_Alan"]])
-
-    # CSV'ye kaydet
     df.to_csv("optimum_yesil_alan_sonuclari.csv", index=False)
     print("\n📁 Sonuçlar 'optimum_yesil_alan_sonuclari.csv' dosyasına kaydedildi.")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(history_ga, label="GA", marker='o')
+    plt.plot(history_pso, label="PSO", marker='x')
+    plt.title("Yakınsama Grafiği: GA vs PSO")
+    plt.xlabel("Nesil")
+    plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("karsilastirma_yakinssama_grafigi.png")
+    plt.show()
+    print("\n📊 Karşılaştırma grafiği 'karsilastirma_yakinssama_grafigi.png' olarak kaydedildi.")
 
 if __name__ == "__main__":
     main()
