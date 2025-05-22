@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
-# Parametreler
+# ======================= PARAMETRELER ======================= #
 W1 = 0.5
 W2 = 0.5
-TOTAL_LIMIT = 3_000_000
-PER_TOWN_LIMIT = 1_000_000
+TOTAL_LIMIT = 3_000_000       # Toplam yeni yeşil alan sınırı (m²)
+PER_TOWN_LIMIT = 1_000_000    # İlçe başı maksimum yeni yeşil alan (m²)
 
 NUM_PARTICLES = 100
 MAX_ITER = 200
@@ -17,19 +18,20 @@ SEED = 42
 
 np.random.seed(SEED)
 
-### Yardımcı Fonksiyon ###
+# ======================= YARDIMCI FONKSİYONLAR ======================= #
 def repair_vector(x, bounds):
+    """Sınır dışına çıkan veya toplam limiti aşan çözüm vektörünü onarır."""
     x = np.clip(x, [b[0] for b in bounds], [b[1] for b in bounds])
     total = np.sum(x)
     if total > TOTAL_LIMIT:
-        x *= TOTAL_LIMIT / total
+        x *= TOTAL_LIMIT / total  # Orantılı olarak küçült
     return x
 
-### Objective Function ###
 def objective(x, S, P, GA):
+    """Amaç fonksiyonu: daha düşük değer daha iyidir."""
     return np.sum((S * P) / (GA + x + 1))
 
-### PSO Sınıfı ###
+# ======================= PSO SINIFI ======================= #
 class Particle:
     def __init__(self, dim, bounds):
         self.x = np.array([np.random.uniform(lb, ub) for lb, ub in bounds])
@@ -49,9 +51,13 @@ def run_pso(bounds, S, P, GA):
     for k in range(MAX_ITER):
         for p in swarm:
             y = objective(p.x, S, P, GA)
+
+            # Kişisel en iyi güncelle
             if y < p.y_best:
                 p.y_best = y
                 p.x_best = p.x.copy()
+
+            # Küresel en iyi güncelle
             if y < g_best_y:
                 g_best_y = y
                 g_best_x = p.x.copy()
@@ -68,22 +74,54 @@ def run_pso(bounds, S, P, GA):
 
     return g_best_x, g_best_y, history
 
-### Ana Fonksiyon ###
+# ======================= ANA FONKSİYON ======================= #
+
+def plot_convergence(history):
+    plt.figure(figsize=(10, 6))
+    plt.plot(history, marker='o', color='blue', label='Amaç Fonksiyonu')
+
+    # Yakınsanan en iyi değer
+    final_value = history[-1]
+    plt.axhline(y=final_value, color='red', linestyle='--', linewidth=2,
+                label=f"Yakınsama Değeri ≈ {final_value:.2f}")
+
+    # Etiket metni
+    plt.text(len(history) * 0.6, final_value + 10,
+             f"Z* ≈ {final_value:.2f}", color='red', fontsize=12)
+
+    plt.title("PSO Yakınsama Grafiği")
+    plt.xlabel("İterasyon")
+    plt.ylabel("Amaç Fonksiyonu (Z)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("pso_yakinssama_grafigi.png")
+    print("📊 Yakınsama grafiği 'pso_yakinssama_grafigi.png' olarak kaydedildi.")
+
 def main():
-    df = pd.read_csv("result/birlesik_ilce_verisi.csv")
+    data_path = "result/birlesik_ilce_verisi.csv"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"❌ Dosya bulunamadı: {data_path}")
+
+    df = pd.read_csv(data_path)
+
+    # Girdi verileri ve Si hesaplama
     df["Ti"] = df["Minibus_Durak_Sayisi"] + df["Taksi_Durak_Sayisi"] + 2 * df["Rayli_Istasyon_Sayisi"]
     df["Si"] = W1 * df["Ortalama_AQI"] + W2 * df["Ti"]
 
-    GA = df["alan_metrekare"].values
-    P = df["Nufus"].values
-    S = df["Si"].values
+    GA = df["alan_metrekare"].values.astype(float)
+    P = df["Nufus"].values.astype(float)
+    S = df["Si"].values.astype(float)
 
+    # Sınırlar
     lower_bounds = np.zeros(len(GA))
     upper_bounds = np.minimum(GA / 2, PER_TOWN_LIMIT)
     bounds = list(zip(lower_bounds, upper_bounds))
 
+    # PSO çalıştır
     best_sol, best_score, history = run_pso(bounds, S, P, GA)
 
+    # Sonuçları dataframe'e ekle
     df["PSO_Yeni_Yesil_Alan"] = best_sol
     df["PSO_Toplam_Yesil_Alan"] = df["alan_metrekare"] + best_sol
 
@@ -91,19 +129,13 @@ def main():
     print(f"📏 Toplam yeni yapılan yeşil alan (PSO): {np.sum(best_sol):,.2f} m²")
     print(df[["ILCE", "PSO_Yeni_Yesil_Alan", "PSO_Toplam_Yesil_Alan"]])
 
-    df.to_csv("optimum_yesil_alan_sonuclari_pso.csv", index=False)
-    print("📁 Sonuçlar 'optimum_yesil_alan_sonuclari_pso.csv' dosyasına kaydedildi.")
+    # CSV'ye kaydet
+    output_path = "optimum_yesil_alan_sonuclari_pso.csv"
+    df.to_csv(output_path, index=False)
+    print(f"📁 Sonuçlar '{output_path}' dosyasına kaydedildi.")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(history, marker='o', color='blue')
-    plt.title("PSO Yakınsama Grafiği")
-    plt.xlabel("Iterasyon")
-    plt.ylabel("Amaç Fonksiyonu (Z)")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("pso_yakinssama_grafigi.png")
-    # plt.show()
-    print("📊 Yakınsama grafiği 'pso_yakinssama_grafigi.png' olarak kaydedildi.")
+    # Yakınsama grafiğini çiz
+    plot_convergence(history)
 
 if __name__ == "__main__":
     main()
