@@ -84,22 +84,14 @@ def main():
 
     S = W1 * AQI + W2 * Ti
 
+
     lower_bounds = np.zeros(len(GA_real))
     upper_bounds = np.minimum(GA_real / 2, PER_TOWN_LIMIT)
     bounds = list(zip(lower_bounds, upper_bounds))
 
     def objective(x):
-        # Performans kısmı (normalize değerlerle)
-        base = np.sum((S * P) / (GA_norm + x / GA_max + 1e-6))  # Normalize edilmiş yeşil alan + yeni alan (normalize)
-
-        # Kişi başına düşen mevcut yeşil alan (ceza için gerçek değerlerle)
-        green_per_person = GA_real / (P_real + 1e-6)  # bölme hatası engeli
-        normalized_gpp = green_per_person / np.max(green_per_person)  # normalize et
-
-        # Ceza: kişi başına zaten çok düşüyorsa ve hâlâ yeni alan veriyorsak, cezalandır
-        fairness_penalty = np.sum(x * normalized_gpp)
-
-        return base + 0 * fairness_penalty  # 0.5 ceza katsayısı, denemeye açık
+        x_norm = x / GA_real.max()
+        return np.sum((S * P) / (GA_norm + x_norm + 1e-3))
 
     best_solution, best_score, history = run_ga(bounds, objective)
 
@@ -110,7 +102,6 @@ def main():
     print(f"\n✅ En iyi skor: {best_score:.2f}")
     print(f"📏 Toplam yeni yapılan yeşil alan: {np.sum(best_solution):,.2f} m²")
     print(df[["ILCE", "Yeni_Yapilacak_Yesil_Alan", "Toplam_Yesil_Alan"]])
-
     df.to_csv("optimum_yesil_alan_sonuclari.csv", index=False)
     print("\n📁 Sonuçlar 'optimum_yesil_alan_sonuclari.csv' dosyasına kaydedildi.")
 
@@ -121,7 +112,6 @@ def main():
     plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("ga_yakinssama_grafigi.png")
     plt.show()
     print("\n📊 Yakınsama grafiği 'ga_yakinssama_grafigi.png' olarak kaydedildi.")
 
