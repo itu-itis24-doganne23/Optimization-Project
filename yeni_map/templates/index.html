@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Yeşil Alan Haritası</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 90vh; }
+        .controls {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="changeW(0.1)">W1 +</button>
+        <button onclick="changeW(-0.1)">W1 -</button>
+        <button onclick="setAlgo('GA')">GA</button>
+        <button onclick="setAlgo('PSO')">PSO</button>
+        <span id="weights">W1: 0.5 | W2: 0.5 | Algoritma: GA</span>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let w1 = 0.5, w2 = 0.5;
+        let currentAlgo = "GA";
+        let map = L.map('map').setView([41.0082, 28.9784], 10);
+        let geojsonLayer;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
+        // Türkçe karakter normalize eden JS fonksiyonu
+        function normalizeName(name) {
+            if (!name) return "";
+            name = name.trim().toLowerCase();
+            const trMap = {
+                'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+                'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'I': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+            };
+            return name.split('').map(c => trMap[c] || c).join('').replace(/\s+/g, '');
+        }
+
+        function getColor(value) {
+            return value > 100000 ? '#005824' :
+                   value > 50000  ? '#238b45' :
+                   value > 20000  ? '#41ae76' :
+                   value > 5000   ? '#66c2a4' :
+                   value > 0      ? '#ccece6' :
+                                    '#f7f7f7';
+        }
+
+        function style(feature) {
+            return {
+                fillColor: '#ccc',
+                weight: 1,
+                opacity: 1,
+                color: 'white',
+                fillOpacity: 0.7
+            };
+        }
+
+        fetch("/static/istanbul-districts.json")
+            .then(response => response.json())
+            .then(geojsonData => {
+                geojsonLayer = L.geoJson(geojsonData, {
+                    style: style,
+                    onEachFeature: function (feature, layer) {
+                        layer.bindPopup(feature.properties.name);
+                    }
+                }).addTo(map);
+                updateMap();
+            });
+
+        function updateMap() {
+            document.getElementById("weights").textContent = `W1: ${w1.toFixed(1)} | W2: ${w2.toFixed(1)} | Algoritma: ${currentAlgo}`;
+            fetch(`/data?w1=${w1}&w2=${w2}&algo=${currentAlgo}`)
+                .then(response => response.json())
+                .then(data => {
+                    geojsonLayer.eachLayer(layer => {
+                        const ilce = normalizeName(layer.feature.properties.name);
+                        const value = data[ilce] || 0;
+                        layer.setStyle({ fillColor: getColor(value) });
+                        layer.bindPopup(`${layer.feature.properties.name}: ${value.toLocaleString()} m²`);
+                    });
+                });
+        }
+
+        function changeW(delta) {
+            w1 = Math.max(0, Math.min(1, w1 + delta));
+            w2 = 1 - w1;
+            updateMap();
+        }
+
+        function setAlgo(algo) {
+            currentAlgo = algo;
+            updateMap();
+        }
+    </script>
+</body>
+</html>
