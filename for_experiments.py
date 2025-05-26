@@ -64,39 +64,21 @@ def select(population, fitnesses):
 
 def repair_individual(x, bounds):
     x = np.array([np.clip(val, bounds[i][0], bounds[i][1]) for i, val in enumerate(x)])
-
-    # Get population and existing green area data
-    df = pd.read_csv("data_processed/birlesik_ilce_verisi.csv")
-    GA_real = df["alan_metrekare"].values.astype(float)
-    P_real = df["Nufus"].values.astype(float)
-
-    # En az kişi başı 2 m² yeşil alan şartı
-    min_green_per_person = 2.0  # m²
-    min_total_green = min_green_per_person * P_real
-    current_total_green = GA_real + x
-
-    deficit = min_total_green - current_total_green
-    deficit[deficit < 0] = 0  # Negatif farkları sıfırla
-
-    x += deficit  # Eksik olan yeşil alanı tamamla
-
-    # Bütçeyi tamamen kullanmak için zorla ölçekle
     total = np.sum(x)
-    if total > 1e-9:
-        x = x * (TOTAL_LIMIT / total)
-    else:
-        x = np.zeros_like(x)
+    if total > TOTAL_LIMIT:
+        # Avoid division by zero if total is zero (though unlikely if TOTAL_LIMIT > 0)
+        if total > 1e-9:
+            x = x * (TOTAL_LIMIT / total)
+        else:  # If total is near zero and exceeds TOTAL_LIMIT (impossible if TOTAL_LIMIT > 0)
+            x = np.zeros_like(x)  # Or handle as an error/special case
 
-    # Bounds sınırını yeniden kontrol et
     x = np.array([np.clip(val, bounds[i][0], bounds[i][1]) for i, val in enumerate(x)])
-
-    # Tekrar toplam kontrolü (bounds daraltmış olabilir)
-    total = np.sum(x)
-    if total > 1e-9:
-        x = x * (TOTAL_LIMIT / total)
-    else:
-        x = np.zeros_like(x)
-
+    if np.sum(x) > TOTAL_LIMIT:
+        current_sum = np.sum(x)
+        if current_sum > 1e-9:  # Avoid division by zero
+            x = x * (TOTAL_LIMIT / current_sum)
+        else:
+            x = np.zeros_like(x)
     return x
 
 
@@ -360,9 +342,9 @@ def main():
         best_solution_ga, best_score_ga, history_ga = run_ga(bounds, objective)
         plt.figure(figsize=(10, 6))
         plt.plot(history_ga, marker='o', linestyle='-', color='green')
-        plt.title(f"GA Convergence for last scenario ({label})")
-        plt.xlabel("Nesil")
-        plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
+        plt.title(f"GA Convergence for W1=0.5 W2=0.5 Scenario")
+        plt.xlabel("Generation")
+        plt.ylabel("Best Score")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig("outputs/ga_convergence.png")
@@ -381,9 +363,9 @@ def main():
 
         plt.figure(figsize=(10, 6))
         plt.plot(history_pso, marker='o', linestyle='-', color='green')
-        plt.title(f"PSO Convergence for last scenario ({label})")
-        plt.xlabel("Nesil")
-        plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
+        plt.title(f"PSO Convergence for W1=0.5 W2=0.5 Scenario")
+        plt.xlabel("Generation")
+        plt.ylabel("Best Score")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig("outputs/pso_convergence.png")

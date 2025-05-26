@@ -4,10 +4,10 @@ import unicodedata
 
 app = Flask(__name__)
 
-# CSV dosyasını yükle
-df = pd.read_csv("../outputs/new_optimum_yesil_alan_sonuclari_SCENARIOS.csv")
+# upload csv
+df = pd.read_csv("static/new_optimum_yesil_alan_sonuclari_SCENARIOS.csv")
 
-# İlçe adlarını normalize eden fonksiyon
+# normalize district names
 def normalize_name(name):
     if not isinstance(name, str):
         return ""
