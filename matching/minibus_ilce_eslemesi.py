@@ -4,7 +4,7 @@ from shapely.geometry import Point
 import json
 import os
 
-minibus_json_path = "data/minibus_station.json"
+minibus_json_path = "../data_raw/minibus_station.json"
 ilce_geojson_path = "data/istanbul-districts.json"
 
 with open(minibus_json_path, "r", encoding="utf-8") as f:
@@ -33,6 +33,6 @@ result_df = joined[["DURAK_ADI", "name"]]
 result_df.columns = ["Durak Adı", "İlçe"]
 
 os.makedirs("result", exist_ok=True)
-result_df.to_csv("result/minibus_duraklari_ilceler.csv", index=False, encoding="utf-8-sig")
+result_df.to_csv("../data_processed/minibus_duraklari_ilceler.csv", index=False, encoding="utf-8-sig")
 
-print("✅ CSV dosyası 'result/minibus_duraklari_ilceler.csv' olarak kaydedildi.")
+print("✅ CSV dosyası '../data_processed/minibus_duraklari_ilceler.csv' olarak kaydedildi.")

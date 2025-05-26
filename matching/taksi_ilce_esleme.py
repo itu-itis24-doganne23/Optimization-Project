@@ -5,8 +5,8 @@ import json
 import os
 
 # Dosya yolları (gerekiyorsa güncelle)
-taksi_json_path = "data/taxi_station.json"
-ilce_geojson_path = "data/istanbul-districts.json"
+taksi_json_path = "../data_raw/taxi_station.json"
+ilce_geojson_path = "../data_raw/istanbul-districts.json"
 
 # 1. Taksi durağı verisini oku
 with open(taksi_json_path, "r", encoding="utf-8") as f:
@@ -35,6 +35,6 @@ result_df.columns = ["Durak Adı", "İlçe"]
 
 # 5. Kaydet
 os.makedirs("result", exist_ok=True)
-result_df.to_csv("result/taksi_duraklari_ilceler.csv", index=False, encoding="utf-8-sig")
+result_df.to_csv("../data_processed/taksi_duraklari_ilceler.csv", index=False, encoding="utf-8-sig")
 
 print("✅ CSV dosyası 'result/taksi_duraklari_ilceler.csv' olarak kaydedildi.")

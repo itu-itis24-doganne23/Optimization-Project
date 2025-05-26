@@ -12,7 +12,7 @@ def normalize_ilce(ad):
 
 # --- NÜFUS VERİSİNİ OKU VE DÜZENLE ---
 raw_lines = []
-with open("data/ilce_bazinda_nufus.csv", "r", encoding="utf-8") as f:
+with open("../data_raw/ilce_bazinda_nufus.csv", "r", encoding="utf-8") as f:
     for line in f:
         parts = line.strip().split("|")
         if len(parts) >= 3 and "İstanbul" in parts[1]:
@@ -28,27 +28,27 @@ nufus_df["ILCE"] = nufus_df["ILCE_RAW"].apply(normalize_ilce)
 
 
 # Ana dosya
-alan_df = pd.read_csv("result/ilce_toplam_alanlar.csv")
+alan_df = pd.read_csv("../data_processed/ilce_toplam_alanlar.csv")
 alan_df["ILCE_RAW"] = alan_df["ILCE"]
 alan_df["ILCE"] = alan_df["ILCE"].apply(normalize_ilce)
 
 # Minibüs
-minibus_df = pd.read_csv("result/ilce_toplam_minibus.csv")
+minibus_df = pd.read_csv("../data_processed/ilce_toplam_minibus.csv")
 minibus_df.columns = ["ILCE_RAW", "Minibus_Durak_Sayisi"]
 minibus_df["ILCE"] = minibus_df["ILCE_RAW"].apply(normalize_ilce)
 
 # Raylı sistem
-rayli_df = pd.read_csv("result/ilce_toplam_rayli.csv")
+rayli_df = pd.read_csv("../data_processed/ilce_toplam_rayli.csv")
 rayli_df.columns = ["ILCE_RAW", "Rayli_Istasyon_Sayisi"]
 rayli_df["ILCE"] = rayli_df["ILCE_RAW"].apply(normalize_ilce)
 
 # Taksi
-taksi_df = pd.read_csv("result/ilce_toplam_taksi.csv")
+taksi_df = pd.read_csv("../data_processed/ilce_toplam_taksi.csv")
 taksi_df.columns = ["ILCE_RAW", "Taksi_Durak_Sayisi"]
 taksi_df["ILCE"] = taksi_df["ILCE_RAW"].apply(normalize_ilce)
 
 #hava kalitesi
-aqi_df = pd.read_csv("result/hava_kalitesi_ortalamalari.csv")  # dosya adı aqi_verisi.csv olsun
+aqi_df = pd.read_csv("../data_processed/hava_kalitesi_ortalamalari.csv")  # dosya adı aqi_verisi.csv olsun
 aqi_df.columns = ["ILCE_RAW", "Ortalama_AQI"]
 aqi_df["ILCE"] = aqi_df["ILCE_RAW"].apply(normalize_ilce)
 
@@ -71,6 +71,6 @@ merged.rename(columns={"ILCE_RAW": "ILCE"}, inplace=True)
 merged = merged[["ILCE", "alan_metrekare", "Nufus", "Minibus_Durak_Sayisi",
                  "Rayli_Istasyon_Sayisi", "Taksi_Durak_Sayisi", "Ortalama_AQI"]]
 # Kaydet
-merged.to_csv("result/birlesik_ilce_verisi.csv", index=False)
+merged.to_csv("../data_processed/birlesik_ilce_verisi.csv", index=False)
 
 print("✅ İlçeler normalize edildi, eşleşmeler sağlandı, dosya başarıyla oluşturuldu.")

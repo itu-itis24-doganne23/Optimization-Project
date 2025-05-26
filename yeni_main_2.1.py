@@ -259,7 +259,7 @@ def main():
         {"W1": 0.0, "W2": 1.0, "label": "W1_0.0_W2_1.0"}
     ]
 
-    df_base = pd.read_csv("result/birlesik_ilce_verisi.csv")
+    df_base = pd.read_csv("data_processed/birlesik_ilce_verisi.csv")
     df_results = df_base.copy()
 
     # Toplu taşıma puanı (calculated once)
@@ -376,7 +376,7 @@ def main():
             print("⚠️ PSO did not return a valid solution for this scenario.")
 
     # Save the consolidated DataFrame
-    output_filename = "new_optimum_yesil_alan_sonuclari_SCENARIOS.csv"
+    output_filename = "outputs/new_optimum_yesil_alan_sonuclari_SCENARIOS.csv"
     df_results.to_csv(output_filename, index=False, encoding='utf-8-sig')
     print(f"\n📁 Tüm senaryo sonuçları '{output_filename}' dosyasına kaydedildi.")
 
