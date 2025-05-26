@@ -246,17 +246,7 @@ def create_pso_population(num_particles, bounds, repair_func, objective_func_pso
 def main():
     # Define W1 and W2 scenarios
     weight_scenarios = [
-        {"W1": 1.0, "W2": 0.0, "label": "W1_1.0_W2_0.0"},
-        {"W1": 0.9, "W2": 0.1, "label": "W1_0.9_W2_0.1"},
-        {"W1": 0.8, "W2": 0.2, "label": "W1_0.8_W2_0.2"},
-        {"W1": 0.7, "W2": 0.3, "label": "W1_0.7_W2_0.3"},
-        {"W1": 0.6, "W2": 0.4, "label": "W1_0.6_W2_0.4"},
         {"W1": 0.5, "W2": 0.5, "label": "W1_0.5_W2_0.5"},
-        {"W1": 0.4, "W2": 0.5, "label": "W1_0.4_W2_0.6"},
-        {"W1": 0.3, "W2": 0.7, "label": "W1_0.3_W2_0.7"},
-        {"W1": 0.2, "W2": 0.8, "label": "W1_0.2_W2_0.8"},
-        {"W1": 0.1, "W2": 0.9, "label": "W1_0.1_W2_0.9"},
-        {"W1": 0.0, "W2": 1.0, "label": "W1_0.0_W2_1.0"}
     ]
 
     df_base = pd.read_csv("data_processed/birlesik_ilce_verisi.csv")
@@ -340,6 +330,15 @@ def main():
         print("🧬 Running Genetic Algorithm...")
         # Pass the 'objective' function which now uses the updated 'S_norm_current'
         best_solution_ga, best_score_ga, history_ga = run_ga(bounds, objective)
+        plt.figure(figsize=(10, 6))
+        plt.plot(history_ga, marker='o', linestyle='-', color='green')
+        plt.title(f"GA Convergence for last scenario ({label})")
+        plt.xlabel("Nesil")
+        plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig("outputs/ga_convergence.png")
+        plt.show()
 
         print("\n⚙️ Running Particle Swarm Optimization...")
         # Seed for PSO population creation to ensure some consistency if desired for PSO part
@@ -351,6 +350,16 @@ def main():
             population_particles=pso_particles,
             k_max=PSO_ITERATIONS
         )
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(history_pso, marker='o', linestyle='-', color='green')
+        plt.title(f"PSO Convergence for last scenario ({label})")
+        plt.xlabel("Nesil")
+        plt.ylabel("En İyi Amaç Fonksiyonu Değeri (Z)")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig("outputs/pso_convergence.png")
+        plt.show()
 
         # Store results with scenario-specific column names
         ga_col_yeni = f"Yeni_Yapilacak_Yesil_Alan_GA_{label}"
@@ -388,14 +397,14 @@ def main():
         })
 
     # Save the consolidated DataFrame
-    output_filename = "outputs/new_optimum_yesil_alan_sonuclari_SCENARIOS.csv"
+    output_filename = "outputs/one_scenario.csv"
     df_results.to_csv(output_filename, index=False, encoding='utf-8-sig')
     print(f"\n📁 Tüm senaryo sonuçları '{output_filename}' dosyasına kaydedildi.")
 
     # write the best scores in csv file
     df_scores = pd.DataFrame(score_rows)
-    df_scores.to_csv("outputs/optimization_best_scores.csv", index=False, encoding="utf-8-sig")
-    print("📁 En iyi skorlar 'outputs/optimization_best_scores.csv' dosyasına kaydedildi.")
+    df_scores.to_csv("outputs/for_experiments.csv", index=False, encoding="utf-8-sig")
+    print("📁 En iyi skorlar 'for_experiments.csv' dosyasına kaydedildi.")
     # Convergence plots are not shown per scenario to avoid multiple pop-ups.
     # If needed, history_ga and history_pso for the last scenario (or all stored ones) can be plotted here.
     # For example, to plot the last GA history:
