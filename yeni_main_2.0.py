@@ -417,6 +417,6 @@ if __name__ == "__main__":
         print("Dummy CSV created.")
 
     # It's good practice to seed random number generators for reproducibility if needed
-    # random.seed(42)
-    # np.random.seed(42)
+    random.seed(42)
+    np.random.seed(42)
     main()
