@@ -138,7 +138,7 @@ def main():
             print(f"Uyarı: {station_name} istasyonu için belirtilen periyotlarda hesaplanacak AQI verisi bulunamadı.")
 
             
-    csv_file_name = "result/hava_kalitesi_ortalamalari.csv"
+    csv_file_name = "../data_processed/hava_kalitesi_ortalamalari.csv"
     try:
         with open(csv_file_name, mode='w', newline='', encoding='utf-8-sig') as file:
             writer = csv.writer(file)

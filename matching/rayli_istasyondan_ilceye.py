@@ -5,8 +5,8 @@ import json
 import os
 
 # JSON dosyalarının yolları
-istasyon_json_path = "data/station_data.json"  # senin dosya adın burada
-ilce_geojson_path = "data/istanbul-districts.json"    # senin dosya adın burada
+istasyon_json_path = "../data_raw/station_data.json"  # senin dosya adın burada
+ilce_geojson_path = "../data_raw/istanbul-districts.json"    # senin dosya adın burada
 
 # 1. İstasyon verisini oku
 with open(istasyon_json_path, "r", encoding="utf-8") as f:
@@ -36,6 +36,6 @@ result_df.columns = ["Proje Adı", "İstasyon Adı", "İlçe"]
 
 # 5. CSV olarak kaydet
 os.makedirs("result", exist_ok=True)
-result_df.to_csv("result/istasyon_ilce_eslesmesi.csv", index=False, encoding="utf-8-sig")
+result_df.to_csv("../data_processed/istasyon_ilce_eslesmesi.csv", index=False, encoding="utf-8-sig")
 
 print("✅ CSV dosyası 'result/istasyon_ilce_eslesmesi.csv' olarak kaydedildi.")
