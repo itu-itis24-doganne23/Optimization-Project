@@ -300,7 +300,7 @@ def main():
         x_norm = x_new_green_area_real / (GA_max + 1e-9)
         total_norm_green_area = GA_norm + x_norm
 
-        current_S_norm = objective_params['S_norm_current']  # Use S_norm from the dictionary
+        current_S_norm = objective_params['S_norm_current']
 
         performance_term = (current_S_norm * P_norm) / (total_norm_green_area + 1e-6)
         base = np.sum(performance_term)
@@ -319,9 +319,18 @@ def main():
         else:
             norm_initial_gpp = np.zeros_like(initial_green_per_person_real)
 
+        # ⚠️ Yeni: kişi başı 1 m² altı ilçelere ceza
+        gpp_deficit = np.maximum(1.0 - green_per_person_real, 0)
+        penalty_min_gpp = np.sum(gpp_deficit)
+
+        # 🎯 Mevcut: adalete dayalı yönlendirme
         fairness_penalty = np.sum(x_new_green_area_real * norm_initial_gpp)
+
+        # 💡 Ağırlık katsayıları
         penalty_coefficient = 0.000005
-        return base + penalty_coefficient * fairness_penalty
+        min_gpp_penalty_coeff = 0.0001  # (isteğe bağlı olarak değiştirilebilir)
+
+        return base + penalty_coefficient * fairness_penalty + min_gpp_penalty_coeff * penalty_min_gpp
 
     #for best scores
     score_rows = []

@@ -64,22 +64,41 @@ def select(population, fitnesses):
 
 def repair_individual(x, bounds):
     x = np.array([np.clip(val, bounds[i][0], bounds[i][1]) for i, val in enumerate(x)])
-    total = np.sum(x)
-    if total > TOTAL_LIMIT:
-        # Avoid division by zero if total is zero (though unlikely if TOTAL_LIMIT > 0)
-        if total > 1e-9:
-            x = x * (TOTAL_LIMIT / total)
-        else:  # If total is near zero and exceeds TOTAL_LIMIT (impossible if TOTAL_LIMIT > 0)
-            x = np.zeros_like(x)  # Or handle as an error/special case
 
+    # Get population and existing green area data
+    df = pd.read_csv("data_processed/birlesik_ilce_verisi.csv")
+    GA_real = df["alan_metrekare"].values.astype(float)
+    P_real = df["Nufus"].values.astype(float)
+
+    # En az kişi başı 2 m² yeşil alan şartı
+    min_green_per_person = 2.0  # m²
+    min_total_green = min_green_per_person * P_real
+    current_total_green = GA_real + x
+
+    deficit = min_total_green - current_total_green
+    deficit[deficit < 0] = 0  # Negatif farkları sıfırla
+
+    x += deficit  # Eksik olan yeşil alanı tamamla
+
+    # Bütçeyi tamamen kullanmak için zorla ölçekle
+    total = np.sum(x)
+    if total > 1e-9:
+        x = x * (TOTAL_LIMIT / total)
+    else:
+        x = np.zeros_like(x)
+
+    # Bounds sınırını yeniden kontrol et
     x = np.array([np.clip(val, bounds[i][0], bounds[i][1]) for i, val in enumerate(x)])
-    if np.sum(x) > TOTAL_LIMIT:
-        current_sum = np.sum(x)
-        if current_sum > 1e-9:  # Avoid division by zero
-            x = x * (TOTAL_LIMIT / current_sum)
-        else:
-            x = np.zeros_like(x)
+
+    # Tekrar toplam kontrolü (bounds daraltmış olabilir)
+    total = np.sum(x)
+    if total > 1e-9:
+        x = x * (TOTAL_LIMIT / total)
+    else:
+        x = np.zeros_like(x)
+
     return x
+
 
 
 def run_ga(bounds, objective_func_ga):  # Renamed to avoid conflict
@@ -290,7 +309,7 @@ def main():
         x_norm = x_new_green_area_real / (GA_max + 1e-9)
         total_norm_green_area = GA_norm + x_norm
 
-        current_S_norm = objective_params['S_norm_current']  # Use S_norm from the dictionary
+        current_S_norm = objective_params['S_norm_current']
 
         performance_term = (current_S_norm * P_norm) / (total_norm_green_area + 1e-6)
         base = np.sum(performance_term)
@@ -309,9 +328,18 @@ def main():
         else:
             norm_initial_gpp = np.zeros_like(initial_green_per_person_real)
 
+        # ⚠️ Yeni: kişi başı 1 m² altı ilçelere ceza
+        gpp_deficit = np.maximum(1.0 - green_per_person_real, 0)
+        penalty_min_gpp = np.sum(gpp_deficit)
+
+        # 🎯 Mevcut: adalete dayalı yönlendirme
         fairness_penalty = np.sum(x_new_green_area_real * norm_initial_gpp)
+
+        # 💡 Ağırlık katsayıları
         penalty_coefficient = 0.000005
-        return base + penalty_coefficient * fairness_penalty
+        min_gpp_penalty_coeff = 0.0001  # (isteğe bağlı olarak değiştirilebilir)
+
+        return base + penalty_coefficient * fairness_penalty + min_gpp_penalty_coeff * penalty_min_gpp
 
     #for best scores
     score_rows = []

@@ -5,7 +5,7 @@ import unicodedata
 app = Flask(__name__)
 
 # CSV dosyasını yükle
-df = pd.read_csv("new_optimum_yesil_alan_sonuclari_SCENARIOS.csv")
+df = pd.read_csv("../outputs/new_optimum_yesil_alan_sonuclari_SCENARIOS.csv")
 
 # İlçe adlarını normalize eden fonksiyon
 def normalize_name(name):
